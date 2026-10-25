@@ -1,0 +1,36 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+*.tmp
+
+# IDE / Editor Files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+
+# Jupyter / Scratch
+.ipynb_checkpoints/
+.virtual_documents/
+Untitled.ipynb
+
+# Environment & Secrets
+.env
+!.env.example
+
+# Build Artifacts & Target Directories
+target/
+**/target/
+build/
+**/build/
+*.class
+
+# Maven Wrapper binaries
+.mvn/wrapper/maven-wrapper.jar
+
+# Logs
+*.log

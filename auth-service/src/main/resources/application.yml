@@ -1,0 +1,30 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/auth}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:Harsh@3417}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      connection-timeout: 3000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+auth:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-me-32-bytes-min!}
+    ttl-seconds: ${JWT_TTL_SECONDS:900}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

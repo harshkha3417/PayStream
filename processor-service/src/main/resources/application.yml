@@ -1,0 +1,27 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: processor-service
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: processor-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+
+processor:
+  min-latency-ms: ${PROCESSOR_MIN_LATENCY_MS:50}
+  max-latency-ms: ${PROCESSOR_MAX_LATENCY_MS:500}
+  failure-rate: ${PROCESSOR_FAILURE_RATE:0.1}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics

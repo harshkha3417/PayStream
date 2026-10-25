@@ -44,4 +44,17 @@ public class GlobalExceptionHandler {
         pd.setProperty("errors", errors);
         return pd;
     }
+    @ExceptionHandler(IdempotencyKeyReuseException.class)
+    public ProblemDetail idempotencyKeyReuse(IdempotencyKeyReuseException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        pd.setTitle("Idempotency-Key reused with a different request");
+        return pd;
+    }
+
+    @ExceptionHandler(IdempotencyInProgressException.class)
+    public ProblemDetail idempotencyInProgress(IdempotencyInProgressException ex) {
+        ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+        pd.setTitle("Request already in progress");
+        return pd;
+    }
 }

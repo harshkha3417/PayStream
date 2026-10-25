@@ -10,6 +10,8 @@ spring:
     password: ${DB_PASSWORD:Harsh@3417}
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:20}
+      connection-timeout: 3000
+      leak-detection-threshold: 10000
   jpa:
     open-in-view: false
     hibernate:
@@ -20,9 +22,32 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    consumer:
+      group-id: payment-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+
+outbox:
+  poll-interval-ms: 500
+  batch-size: 50
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info,metrics
+
+logging:
+  level:
+    com.zaxxer.hikari.pool.HikariPool: DEBUG

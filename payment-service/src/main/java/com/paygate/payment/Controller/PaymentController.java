@@ -4,6 +4,7 @@ import com.paygate.payment.Dto.CreatePaymentRequest;
 import com.paygate.payment.Dto.PageResponse;
 import com.paygate.payment.Dto.PaymentResponse;
 import com.paygate.payment.Entity.Payment;
+import com.paygate.payment.service.IdempotencyService;
 import com.paygate.payment.service.PaymentService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -16,15 +17,26 @@ import java.util.UUID;
 @RequestMapping("/api/v1/payments")
 public class PaymentController {
     private final PaymentService service;
+    private final IdempotencyService idempotencyService;
 
-    public PaymentController(PaymentService service) {
+    public PaymentController(PaymentService service, IdempotencyService idempotencyService) {
         this.service = service;
+        this.idempotencyService = idempotencyService;
     }
 
     @PostMapping
-    public ResponseEntity<PaymentResponse> create(
+    public ResponseEntity<?> create(
             @RequestHeader("X-Merchant-Id") String merchantId,
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
             @Valid @RequestBody CreatePaymentRequest request) {
+
+        if (idempotencyKey == null || idempotencyKey.isBlank()) {
+            return doCreate(merchantId, request);
+        }
+        return idempotencyService.execute(merchantId, idempotencyKey, request, () -> doCreate(merchantId, request));
+    }
+
+    private ResponseEntity<PaymentResponse> doCreate(String merchantId, CreatePaymentRequest request) {
         Payment payment = service.create(merchantId, request);
         return ResponseEntity
                 .created(URI.create("/api/v1/payments/" + payment.getId()))

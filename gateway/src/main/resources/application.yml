@@ -1,0 +1,64 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            # Defaults aren't sized for load testing — a small/unset pool here
+            # queues requests waiting for a free outbound connection, which shows
+            # up as latency blowing up non-linearly under load (not a steady,
+            # proportional "gateway overhead"). Generous on purpose for now;
+            # right-size this later once you know real traffic patterns.
+            pool:
+              max-connections: 1000
+              max-idle-time: 30s
+              acquire-timeout: 5000
+            connect-timeout: 5000
+            response-timeout: 10s
+          routes:
+            - id: auth-route
+              uri: ${AUTH_SERVICE_URL:http://auth-service:8082}
+              predicates:
+                - Path=/api/v1/auth/**,/api/v1/merchants,/api/v1/merchants/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${RATE_LIMIT_PER_SECOND:20}
+                    redis-rate-limiter.burstCapacity: ${RATE_LIMIT_BURST:40}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@merchantKeyResolver}"
+            - id: payment-route
+              uri: ${PAYMENT_SERVICE_URL:http://payment-service:8081}
+              predicates:
+                - Path=/api/v1/payments,/api/v1/payments/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${RATE_LIMIT_PER_SECOND:20}
+                    redis-rate-limiter.burstCapacity: ${RATE_LIMIT_BURST:40}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@merchantKeyResolver}"
+      # No route is defined for /internal/** on purpose: even if JwtAuthGlobalFilter
+      # were ever removed, an unmatched path falls through to a plain 404.
+
+gateway:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-me-32-bytes-min!}
+  rate-limit:
+    per-second: ${RATE_LIMIT_PER_SECOND:20}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
