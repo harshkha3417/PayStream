@@ -10,10 +10,10 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
     consumer:
-      group-id: processor-service
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:processor-service-v2}
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      auto-offset-reset: earliest
+      auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET:latest}
 
 processor:
   min-latency-ms: ${PROCESSOR_MIN_LATENCY_MS:50}

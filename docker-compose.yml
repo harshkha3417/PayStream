@@ -10,6 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init-databases.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d payments"]
       interval: 5s
@@ -77,6 +78,40 @@ services:
       PROCESSOR_FAILURE_RATE: "0.1"
     # No host port published on purpose: internal Kafka consumer/producer service
 
+  refund-service:
+    build: ./refund-service
+    container_name: paygate-refund-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/refunds
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Harsh@3417
+      DB_POOL_SIZE: "10"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    # No host port published: only gateway routes to refund-service
+
+  webhook-service:
+    build: ./webhook-service
+    container_name: paygate-webhook-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/webhooks
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: Harsh@3417
+      DB_POOL_SIZE: "10"
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      WEBHOOK_MAX_ATTEMPTS: "5"
+      WEBHOOK_TIMEOUT_SECONDS: "5"
+    # No host port published: only gateway routes to webhook-service
+
   postgres-auth:
     image: postgres:16
     container_name: paygate-postgres-auth
@@ -129,12 +164,18 @@ services:
         condition: service_started
       payment-service:
         condition: service_started
+      refund-service:
+        condition: service_started
+      webhook-service:
+        condition: service_started
       redis:
         condition: service_healthy
     environment:
       JWT_SECRET: ${JWT_SECRET}
       AUTH_SERVICE_URL: http://auth-service:8082
       PAYMENT_SERVICE_URL: http://payment-service:8081
+      REFUND_SERVICE_URL: http://refund-service:8084
+      WEBHOOK_SERVICE_URL: http://webhook-service:8085
       RATE_LIMIT_PER_SECOND: "20"
       RATE_LIMIT_BURST: "40"
       REDIS_HOST: redis

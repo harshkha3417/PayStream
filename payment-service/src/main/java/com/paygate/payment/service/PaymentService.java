@@ -80,9 +80,26 @@ public class PaymentService {
         history.save(new PaymentStatusHistory(id, from, next));
         publishEvent(payment.getId(), payment.getMerchantId(), "payment.status-changed", Map.of(
                 "from", from != null ? from.name() : "",
-                "to", next.name()
+                "to", next.name(),
+                "amount", payment.getAmountMinor(),
+                "currency", payment.getCurrency(),
+                "method", payment.getMethod().name()
         ));
         return payment;
+    }
+
+    /**
+     * Applies a refund transition (PARTIALLY_REFUNDED or REFUNDED) triggered by refund-service.
+     * If the payment is already in REFUNDED state, idempotent re-deliveries are safely ignored.
+     */
+    @Transactional
+    public Payment applyRefundOutcome(UUID paymentId, PaymentStatus targetStatus) {
+        Payment payment = payments.findById(paymentId)
+                .orElseThrow(() -> new PaymentNotFoundException(paymentId));
+        if (payment.getStatus() == PaymentStatus.REFUNDED) {
+            return payment;
+        }
+        return transition(paymentId, targetStatus);
     }
 
     /**

@@ -233,7 +233,7 @@ payment-gateway/
 | 2 | Auth/Merchant + Gateway | JWT and API-key auth, merchant scoping, routing, rate limit stub | ☑ |
 | 3 | Idempotency + concurrency | Idempotency-Key, Redis fast path, optimistic-lock and double-submit tests | ☑ |
 | 4 | Kafka + outbox + Processor | Async processing, outbox relay, consumer dedupe, remove `/internal` endpoint | ☑ |
-| 5 | Webhooks + Refunds | Signed webhooks with retry/DLQ, full and partial refunds | ☐ |
+| 5 | Webhooks + Refunds | Signed webhooks with retry/DLQ, full and partial refunds | ☑ |
 | 6 | Ledger + history + audit | Double-entry ledger, history API, insert-only audit log | ☐ |
 | 7 | Performance and observability | Redis caching, tuning, Prometheus/Grafana, load tests 1k → 100k with recorded gains | ☐ |
 | 8 | AWS deployment | ECS + RDS + ElastiCache + Kafka, ALB, CI/CD, load test in cloud | ☐ |
@@ -280,6 +280,9 @@ Easy phases can be merged (5 + 6 are the best candidates). Do not merge 3 or 4; 
 | 25 | Consumer deduplication enforced via domain state-machine guards rather than a separate `processed_events` dedup table | In `payment-service`, transitions (`PROCESSING -> SUCCEEDED/FAILED`) are rejected by `InvalidStatusTransitionException` on duplicate processing; catching this as a benign no-op guarantees idempotency without extra DB table overhead |
 | 26 | `processor-service` is an asynchronous, headless simulator consuming `payment.created` and publishing `payment.processed` with configurable latency and failure rates | Simulates real-world bank network calls asynchronously; duplicates `PaymentEventEnvelope` record locally per Decision #12 rather than coupling via shared library jar |
 | 27 | Single-node Apache Kafka in KRaft mode deployed in Docker Compose without ZooKeeper | Standard modern Kafka setup; eliminates ZooKeeper operational complexity and aligns with contemporary production architectures |
+| 28 | Event-driven localized read model (`RefundablePayment`) in `refund-service` | Preserves microservice isolation and zero cross-database queries (Decision #4, #10). `refund-service` builds and updates its own local view of payments from `payment.created` and `payment.status-changed` Kafka events |
+| 29 | HMAC-SHA256 webhook payload signing and delivery audit log with exponential backoff & DLQ | Industry-standard payload authentication using constant-time verification, per-merchant endpoints, tamper-proof audit trails, and automatic scheduled retries with dead-letter queue routing (`webhooks.dlq`) to prevent lost notifications |
+| 30 | Sizing Hikari connection pools (`DB_POOL_SIZE: 10`) for multi-service local development on 8 GB RAM machines | Running 10 Docker containers (PostgreSQL, Kafka, Redis, 5 Spring Boot microservices, Gateway) locally requires bounded resource footprints; bounding HikariCP to 10 connections per service prevents thread/memory exhaustion while comfortably handling concurrent workloads |
 
 ## 16. Out of scope
 

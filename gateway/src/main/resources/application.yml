@@ -48,6 +48,28 @@ spring:
                     redis-rate-limiter.burstCapacity: ${RATE_LIMIT_BURST:40}
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@merchantKeyResolver}"
+            - id: refund-route
+              uri: ${REFUND_SERVICE_URL:http://refund-service:8084}
+              predicates:
+                - Path=/api/v1/refunds,/api/v1/refunds/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${RATE_LIMIT_PER_SECOND:20}
+                    redis-rate-limiter.burstCapacity: ${RATE_LIMIT_BURST:40}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@merchantKeyResolver}"
+            - id: webhook-route
+              uri: ${WEBHOOK_SERVICE_URL:http://webhook-service:8085}
+              predicates:
+                - Path=/api/v1/webhooks,/api/v1/webhooks/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${RATE_LIMIT_PER_SECOND:20}
+                    redis-rate-limiter.burstCapacity: ${RATE_LIMIT_BURST:40}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@merchantKeyResolver}"
       # No route is defined for /internal/** on purpose: even if JwtAuthGlobalFilter
       # were ever removed, an unmatched path falls through to a plain 404.
 
