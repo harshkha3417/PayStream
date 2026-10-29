@@ -47,7 +47,7 @@ public class PaymentController {
     public PaymentResponse get(
             @RequestHeader("X-Merchant-Id") String merchantId,
             @PathVariable("id") UUID id) {
-        return PaymentResponse.from(service.get(id, merchantId));
+        return service.getPaymentResponse(id, merchantId);
     }
 
     @GetMapping

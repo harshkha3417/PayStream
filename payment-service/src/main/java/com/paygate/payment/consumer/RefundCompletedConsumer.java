@@ -27,7 +27,7 @@ public class RefundCompletedConsumer {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = "refund.completed", groupId = "payment-service")
+    @KafkaListener(topics = "refund.completed", groupId = "payment-service", concurrency = "${KAFKA_LISTENER_CONCURRENCY:4}")
     public void onRefundCompleted(String payload) {
         PaymentEventEnvelope envelope;
         try {

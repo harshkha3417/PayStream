@@ -1,3 +1,5 @@
-target/
-.mvn/
-*.md
+target/*
+!target/*.jar
+.idea/
+*.iml
+.git/

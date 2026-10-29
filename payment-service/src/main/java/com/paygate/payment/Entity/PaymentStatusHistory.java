@@ -11,7 +11,8 @@ import java.util.UUID;
 @Table(name = "payment_status_history")
 public class PaymentStatusHistory {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "payment_status_history_seq")
+    @SequenceGenerator(name = "payment_status_history_seq", sequenceName = "payment_status_history_id_seq", allocationSize = 50)
     private Long id;
 
     @Column(name = "payment_id", nullable = false)

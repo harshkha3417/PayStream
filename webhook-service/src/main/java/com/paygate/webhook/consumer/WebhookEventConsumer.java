@@ -29,7 +29,7 @@ public class WebhookEventConsumer {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = {"payment.created", "payment.status-changed", "refund.completed"}, groupId = "webhook-service")
+    @KafkaListener(topics = {"payment.created", "payment.status-changed", "refund.completed"}, groupId = "webhook-service", concurrency = "${KAFKA_LISTENER_CONCURRENCY:4}")
     @Transactional
     public void onEvent(String payload) {
         PaymentEventEnvelope envelope;

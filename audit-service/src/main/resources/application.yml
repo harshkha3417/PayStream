@@ -4,13 +4,17 @@ server:
 spring:
   application:
     name: audit-service
+  threads:
+    virtual:
+      enabled: true
   datasource:
-    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:postgresql://localhost:5432/audit}}
+    url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:postgresql://localhost:5432/audit?reWriteBatchedInserts=true}}
     username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:postgres}}
     password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:Harsh@3417}}
     hikari:
-      maximum-pool-size: ${DB_POOL_SIZE:10}
-      connection-timeout: 5000
+      maximum-pool-size: ${DB_POOL_SIZE:15}
+      minimum-idle: 5
+      connection-timeout: 3000
       leak-detection-threshold: 10000
   jpa:
     open-in-view: false
@@ -19,7 +23,11 @@ spring:
     properties:
       hibernate:
         jdbc:
+          batch_size: 50
+          batch_versioned_data: true
           time_zone: UTC
+        order_inserts: true
+        order_updates: true
   flyway:
     enabled: true
   kafka:
@@ -32,9 +40,18 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET:latest}
+    listener:
+      concurrency: ${KAFKA_LISTENER_CONCURRENCY:4}
 
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
+  endpoint:
+    prometheus:
+      access: unrestricted
+  prometheus:
+    metrics:
+      export:
+        enabled: true

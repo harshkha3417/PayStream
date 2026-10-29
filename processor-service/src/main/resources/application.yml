@@ -14,6 +14,8 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       auto-offset-reset: ${KAFKA_AUTO_OFFSET_RESET:latest}
+    listener:
+      concurrency: ${KAFKA_LISTENER_CONCURRENCY:4}
 
 processor:
   min-latency-ms: ${PROCESSOR_MIN_LATENCY_MS:50}
@@ -24,4 +26,11 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
+  endpoint:
+    prometheus:
+      access: unrestricted
+  prometheus:
+    metrics:
+      export:
+        enabled: true

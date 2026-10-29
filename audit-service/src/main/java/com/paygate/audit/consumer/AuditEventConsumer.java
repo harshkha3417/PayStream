@@ -26,7 +26,7 @@ public class AuditEventConsumer {
             "payment.status-changed",
             "refund.requested",
             "refund.completed"
-    }, groupId = "audit-service")
+    }, groupId = "audit-service", concurrency = "${KAFKA_LISTENER_CONCURRENCY:4}")
     public void onEvent(String payload) {
         PaymentEventEnvelope envelope;
         try {

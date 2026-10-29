@@ -235,7 +235,7 @@ payment-gateway/
 | 4 | Kafka + outbox + Processor | Async processing, outbox relay, consumer dedupe, remove `/internal` endpoint | ☑ |
 | 5 | Webhooks + Refunds | Signed webhooks with retry/DLQ, full and partial refunds | ☑ |
 | 6 | Ledger + history + audit | Double-entry ledger, history API, insert-only audit log | ☑ |
-| 7 | Performance and observability | Redis caching, tuning, Prometheus/Grafana, load tests 1k → 100k with recorded gains | ☐ |
+| 7 | Performance and observability | Redis caching, tuning, Prometheus/Grafana, load tests 1k → 100k with recorded gains | ☑ |
 | 8 | AWS deployment | ECS + RDS + ElastiCache + Kafka, ALB, CI/CD, load test in cloud | ☐ |
 | 9 | Risk / AI | Rule-based then ML risk score, anomaly detection, AI analytics | ☐ |
 
@@ -285,6 +285,11 @@ Easy phases can be merged (5 + 6 are the best candidates). Do not merge 3 or 4; 
 | 30 | Sizing Hikari connection pools (`DB_POOL_SIZE: 10`) for multi-service local development on 8 GB RAM machines | Running 10 Docker containers (PostgreSQL, Kafka, Redis, 5 Spring Boot microservices, Gateway) locally requires bounded resource footprints; bounding HikariCP to 10 connections per service prevents thread/memory exhaustion while comfortably handling concurrent workloads |
 | 31 | Double-entry balanced ledger with platform fee deduction ($M_{\text{net}} = A - F$) and balanced refund clearing | Financial accounting integrity requires $\sum \text{Debits} = \sum \text{Credits}$ for every financial transition; net settlement and platform revenue are separated at ledger generation time while refunds debit merchant settlement and credit customer |
 | 32 | Immutable audit trail with PostgreSQL trigger-enforced append-only constraints (`trg_audit_logs_immutable`) and event deduplication | Regulatory compliance (SOC 2 / PCI DSS) requires audit logs to be strictly append-only; database-level trigger rejects UPDATE and DELETE operations, while Kafka event deduplication via unique `event_id` prevents duplicate audit records |
+| 33 | Prometheus, Grafana, and Micrometer telemetry across all microservices | Provides real-time cluster visibility across JVM heap, GC pauses, HikariCP connection contention, and HTTP request throughput without blind performance guessing |
+| 34 | Java 21 Virtual Threads (Project Loom) enabled across web microservices (`spring.threads.virtual.enabled: true`) | Uncouples Tomcat request handling from OS carrier threads; virtual threads unmount during blocking I/O, reducing stack memory from 1 MB to < 1 KB and eliminating OS context-switching thread starvation |
+| 35 | Redis Write-Through Caching (`payment:{id}:{merchantId}`) and Event-Driven Invalidation (`ledger:balance:{mId}:{cur}`) | Completely offloads high-volume read traffic (payment status polling and 5-query aggregate ledger balances) to sub-millisecond in-memory lookups, preserving 100% of database connection pool capacity for write transactions |
+| 36 | PostgreSQL Multi-Row JDBC Batch Rewriting (`reWriteBatchedInserts=true`) & Sequence Allocation (`allocationSize = 50`) | JPA `IDENTITY` generation disabled Hibernate insert batching; switching `PaymentStatusHistory` to sequence allocation combined with Postgres driver multi-row rewriting consolidates 5 sequential network round-trips into a single TCP flush |
+| 37 | Kafka 4-Partition Topic Scaling & Consumer Concurrency (`concurrency = 4`) with Murmur2 Key-Preserving Causality | Scaling topic partitions from 1 to 4 quadruples asynchronous consumer throughput ceiling (e.g. from 10 msgs/s to 40 msgs/s in processor-service) while Murmur2 hashing on `paymentId` guarantees strict chronological ordering for every individual payment |
 
 ## 16. Out of scope
 

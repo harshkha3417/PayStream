@@ -48,7 +48,7 @@ public class PaymentProcessedConsumer {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = "payment.processed", groupId = "payment-service")
+    @KafkaListener(topics = "payment.processed", groupId = "payment-service", concurrency = "${KAFKA_LISTENER_CONCURRENCY:4}")
     public void onPaymentProcessed(String payload) {
         PaymentEventEnvelope envelope;
         try {

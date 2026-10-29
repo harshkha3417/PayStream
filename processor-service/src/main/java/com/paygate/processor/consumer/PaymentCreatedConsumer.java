@@ -34,7 +34,7 @@ public class PaymentCreatedConsumer {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = "payment.created", groupId = "${spring.kafka.consumer.group-id:processor-service-v2}")
+    @KafkaListener(topics = "payment.created", groupId = "${spring.kafka.consumer.group-id:processor-service-v2}", concurrency = "${KAFKA_LISTENER_CONCURRENCY:4}")
     public void onPaymentCreated(String payload) {
         PaymentEventEnvelope envelope;
         try {

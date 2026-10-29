@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16
     container_name: paygate-postgres
+    command: postgres -c max_connections=200 -c shared_buffers=128MB
     environment:
       POSTGRES_DB: payments
       POSTGRES_USER: postgres
@@ -50,15 +51,16 @@ services:
       kafka:
         condition: service_healthy
     environment:
-      DB_URL: jdbc:postgresql://postgres:5432/payments
+      DB_URL: jdbc:postgresql://postgres:5432/payments?reWriteBatchedInserts=true
       DB_USER: postgres
       DB_PASSWORD: Harsh@3417
-      DB_POOL_SIZE: "35"
+      DB_POOL_SIZE: "60"
       OUTBOX_BATCH_SIZE: "100"
       OUTBOX_POLL_INTERVAL_MS: "200"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_LISTENER_CONCURRENCY: "4"
     # No host port published on purpose: only the gateway should be reachable
     # from outside Docker. Temporarily uncomment the next two lines if you
     # need to curl payment-service directly while debugging:
@@ -74,6 +76,7 @@ services:
     environment:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       KAFKA_CONSUMER_GROUP_ID: processor-service-v3
+      KAFKA_LISTENER_CONCURRENCY: "4"
       PROCESSOR_MIN_LATENCY_MS: "50"
       PROCESSOR_MAX_LATENCY_MS: "200"
       PROCESSOR_FAILURE_RATE: "0.0"
@@ -88,11 +91,14 @@ services:
       kafka:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/refunds
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/refunds?reWriteBatchedInserts=true
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: Harsh@3417
-      DB_POOL_SIZE: "10"
+      DB_POOL_SIZE: "15"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_LISTENER_CONCURRENCY: "4"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
     # No host port published: only gateway routes to refund-service
 
   webhook-service:
@@ -104,11 +110,14 @@ services:
       kafka:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/webhooks
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/webhooks?reWriteBatchedInserts=true
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: Harsh@3417
-      DB_POOL_SIZE: "10"
+      DB_POOL_SIZE: "15"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_LISTENER_CONCURRENCY: "4"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
       WEBHOOK_MAX_ATTEMPTS: "5"
       WEBHOOK_TIMEOUT_SECONDS: "5"
     # No host port published: only gateway routes to webhook-service
@@ -122,11 +131,14 @@ services:
       kafka:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ledger
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ledger?reWriteBatchedInserts=true
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: Harsh@3417
-      DB_POOL_SIZE: "10"
+      DB_POOL_SIZE: "15"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_LISTENER_CONCURRENCY: "4"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
     # No host port published: only gateway routes to ledger-service
 
   audit-service:
@@ -138,16 +150,20 @@ services:
       kafka:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/audit
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/audit?reWriteBatchedInserts=true
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: Harsh@3417
-      DB_POOL_SIZE: "10"
+      DB_POOL_SIZE: "15"
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_LISTENER_CONCURRENCY: "4"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
     # No host port published: only gateway routes to audit-service
 
   postgres-auth:
     image: postgres:16
     container_name: paygate-postgres-auth
+    command: postgres -c max_connections=100 -c shared_buffers=64MB
     environment:
       POSTGRES_DB: auth
       POSTGRES_USER: postgres
@@ -169,9 +185,10 @@ services:
       postgres-auth:
         condition: service_healthy
     environment:
-      DB_URL: jdbc:postgresql://postgres-auth:5432/auth
+      DB_URL: jdbc:postgresql://postgres-auth:5432/auth?reWriteBatchedInserts=true
       DB_USER: postgres
       DB_PASSWORD: Harsh@3417
+      DB_POOL_SIZE: "20"
       JWT_SECRET: ${JWT_SECRET}
     # No host port published, same reasoning as payment-service: only the
     # gateway should be reachable from outside Docker. Uncomment to debug:
@@ -215,12 +232,34 @@ services:
       WEBHOOK_SERVICE_URL: http://webhook-service:8085
       LEDGER_SERVICE_URL: http://ledger-service:8086
       AUDIT_SERVICE_URL: http://audit-service:8087
-      RATE_LIMIT_PER_SECOND: "20"
-      RATE_LIMIT_BURST: "40"
+      RATE_LIMIT_PER_SECOND: "100"
+      RATE_LIMIT_BURST: "200"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
     ports:
       - "8080:8080"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: paygate-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: paygate-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
 
 volumes:
   pgdata:

@@ -31,7 +31,7 @@ public class LedgerEventConsumer {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = {"payment.status-changed", "refund.completed"}, groupId = "ledger-service")
+    @KafkaListener(topics = {"payment.status-changed", "refund.completed"}, groupId = "ledger-service", concurrency = "${KAFKA_LISTENER_CONCURRENCY:4}")
     @Transactional
     public void onEvent(String payload) {
         PaymentEventEnvelope envelope;

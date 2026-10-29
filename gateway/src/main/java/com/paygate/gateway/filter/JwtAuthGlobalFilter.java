@@ -36,7 +36,8 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PREFIXES = List.of(
             "/api/v1/auth/token",
             "/api/v1/merchants",
-            "/actuator/health"
+            "/actuator/health",
+            "/actuator/prometheus"
     );
 
     private final JwtVerifier jwtVerifier;
