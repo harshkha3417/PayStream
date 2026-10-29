@@ -234,7 +234,7 @@ payment-gateway/
 | 3 | Idempotency + concurrency | Idempotency-Key, Redis fast path, optimistic-lock and double-submit tests | ☑ |
 | 4 | Kafka + outbox + Processor | Async processing, outbox relay, consumer dedupe, remove `/internal` endpoint | ☑ |
 | 5 | Webhooks + Refunds | Signed webhooks with retry/DLQ, full and partial refunds | ☑ |
-| 6 | Ledger + history + audit | Double-entry ledger, history API, insert-only audit log | ☐ |
+| 6 | Ledger + history + audit | Double-entry ledger, history API, insert-only audit log | ☑ |
 | 7 | Performance and observability | Redis caching, tuning, Prometheus/Grafana, load tests 1k → 100k with recorded gains | ☐ |
 | 8 | AWS deployment | ECS + RDS + ElastiCache + Kafka, ALB, CI/CD, load test in cloud | ☐ |
 | 9 | Risk / AI | Rule-based then ML risk score, anomaly detection, AI analytics | ☐ |
@@ -283,6 +283,8 @@ Easy phases can be merged (5 + 6 are the best candidates). Do not merge 3 or 4; 
 | 28 | Event-driven localized read model (`RefundablePayment`) in `refund-service` | Preserves microservice isolation and zero cross-database queries (Decision #4, #10). `refund-service` builds and updates its own local view of payments from `payment.created` and `payment.status-changed` Kafka events |
 | 29 | HMAC-SHA256 webhook payload signing and delivery audit log with exponential backoff & DLQ | Industry-standard payload authentication using constant-time verification, per-merchant endpoints, tamper-proof audit trails, and automatic scheduled retries with dead-letter queue routing (`webhooks.dlq`) to prevent lost notifications |
 | 30 | Sizing Hikari connection pools (`DB_POOL_SIZE: 10`) for multi-service local development on 8 GB RAM machines | Running 10 Docker containers (PostgreSQL, Kafka, Redis, 5 Spring Boot microservices, Gateway) locally requires bounded resource footprints; bounding HikariCP to 10 connections per service prevents thread/memory exhaustion while comfortably handling concurrent workloads |
+| 31 | Double-entry balanced ledger with platform fee deduction ($M_{\text{net}} = A - F$) and balanced refund clearing | Financial accounting integrity requires $\sum \text{Debits} = \sum \text{Credits}$ for every financial transition; net settlement and platform revenue are separated at ledger generation time while refunds debit merchant settlement and credit customer |
+| 32 | Immutable audit trail with PostgreSQL trigger-enforced append-only constraints (`trg_audit_logs_immutable`) and event deduplication | Regulatory compliance (SOC 2 / PCI DSS) requires audit logs to be strictly append-only; database-level trigger rejects UPDATE and DELETE operations, while Kafka event deduplication via unique `event_id` prevents duplicate audit records |
 
 ## 16. Out of scope
 

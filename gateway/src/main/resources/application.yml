@@ -70,6 +70,28 @@ spring:
                     redis-rate-limiter.burstCapacity: ${RATE_LIMIT_BURST:40}
                     redis-rate-limiter.requestedTokens: 1
                     key-resolver: "#{@merchantKeyResolver}"
+            - id: ledger-route
+              uri: ${LEDGER_SERVICE_URL:http://ledger-service:8086}
+              predicates:
+                - Path=/api/v1/ledger,/api/v1/ledger/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${RATE_LIMIT_PER_SECOND:20}
+                    redis-rate-limiter.burstCapacity: ${RATE_LIMIT_BURST:40}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@merchantKeyResolver}"
+            - id: audit-route
+              uri: ${AUDIT_SERVICE_URL:http://audit-service:8087}
+              predicates:
+                - Path=/api/v1/audit,/api/v1/audit/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: ${RATE_LIMIT_PER_SECOND:20}
+                    redis-rate-limiter.burstCapacity: ${RATE_LIMIT_BURST:40}
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@merchantKeyResolver}"
       # No route is defined for /internal/** on purpose: even if JwtAuthGlobalFilter
       # were ever removed, an unmatched path falls through to a plain 404.
 
