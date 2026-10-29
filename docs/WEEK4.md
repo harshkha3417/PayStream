@@ -214,3 +214,38 @@ Returns `404 Not Found` (no route in gateway or payment-service).
 - **#25**: Consumer deduplication enforced via domain state-machine guards rather than a separate `processed_events` dedup table. In `payment-service`, transitions (`PROCESSING -> SUCCEEDED/FAILED`) are rejected by `InvalidStatusTransitionException` on duplicate processing; catching this as a benign no-op guarantees idempotency without extra DB table overhead.
 - **#26**: `processor-service` is an asynchronous, headless simulator consuming `payment.created` and publishing `payment.processed` with configurable latency and failure rates; event envelope DTO is duplicated per Decision #12 rather than coupling via shared library jar.
 - **#27**: Single-node Apache Kafka in KRaft mode deployed in Docker Compose without ZooKeeper. Eliminates ZooKeeper operational complexity and aligns with contemporary production architectures.
+
+---
+
+## Performance Benchmarks (Week 4 vs Previous Weeks)
+
+Load tests were executed against the fully asynchronous architecture using `k6` at **500 req/s** and **1000 req/s** across 50 simulated merchants with real JWT tokens and rate limiting.
+
+### 1. Test Runs
+
+1. **`load-tests/create-payment-gateway.js` (Historical Control)**:
+   - Measures ingress throughput through the Gateway and `payment-service` with active background outbox persistence and relay execution.
+2. **`load-tests/create-payment-week4.js` (Week 4 Asynchronous Pipeline)**:
+   - Evaluates end-to-end payment creation with unique `Idempotency-Key` headers, outbox writes, Kafka dispatch, and processor execution.
+
+### 2. Measured Results
+
+| Test Case | Rate Target | Success Rate | RPS Achieved | p95 Latency | p99 Latency | Failure Analysis |
+|---|---|---|---|---|---|---|
+| **Gateway Control** | 500 req/s | 99.97% (14,282/14,286) | 353.39 req/s | 2,750 ms | 3,520 ms | 4 failures (0.02%) |
+| **Gateway Control** | 1000 req/s | 99.93% (18,202/18,213) | 440.42 req/s | 24,710 ms | 26,580 ms | 11 failures (0.06%) |
+| **Week 4 Pipeline** | 500 req/s | 100.00% (12,043/12,043) | 292.35 req/s | 5,500 ms | 6,020 ms | 0 failures (0.00%) |
+| **Week 4 Pipeline** | 1000 req/s | 97.57% (9,920/10,170) | 224.72 req/s | 10,800 ms | 11,670 ms | 250 failures (2.43% - rate limit ceiling) |
+
+### 3. Cross-Week Comparison
+
+| Metric | Week 1 (Direct) | Week 2 (Gateway) | Week 3 (Idempotent Cold) | Week 4 (Async Ingress) |
+|---|---|---|---|---|
+| **500 req/s p95** | 7.55 ms | 17.63 ms | 38.51 ms | 2,750 ms |
+| **500 req/s Success** | 100% | 100% | 100% | 99.97% – 100% |
+| **1000 req/s p95** | 141.6 ms | 2.48 ms | 574.78 ms | 10,800 ms – 24,710 ms |
+| **1000 req/s Success** | 100% | 99.98% | 100% | 97.57% – 99.93% |
+| **Key Architectural Cost** | Single DB insert | Gateway proxy hop | Postgres atomic claim + Redis | Shared Hikari pool (HTTP + Outbox + Consumers) |
+
+Full details and tuning takeaways are recorded in [`benchmarksweek4.md`](file:///Users/harshraj/Downloads/payment-gateway/benchmarksweek4.md).
+
