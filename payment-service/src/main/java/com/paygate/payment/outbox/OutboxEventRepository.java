@@ -1,9 +1,11 @@
 package com.paygate.payment.outbox;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,4 +29,13 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> 
             FOR UPDATE SKIP LOCKED
             """, nativeQuery = true)
     List<OutboxEvent> claimUnpublishedBatch(@Param("batchSize") int batchSize);
+
+    /**
+     * Efficiently marks a batch of outbox event IDs as published in a single SQL statement,
+     * avoiding entity-by-entity dirty checking.
+     */
+    @Modifying
+    @Query("UPDATE OutboxEvent e SET e.publishedAt = :publishedAt WHERE e.id IN :ids")
+    int markBatchPublished(@Param("ids") List<UUID> ids, @Param("publishedAt") Instant publishedAt);
 }
+
