@@ -6,7 +6,7 @@ spring:
     name: ledger-service
   threads:
     virtual:
-      enabled: true
+      enabled: ${ENABLE_VIRTUAL_THREADS:false}
   datasource:
     url: ${SPRING_DATASOURCE_URL:${DB_URL:jdbc:postgresql://localhost:5432/ledger?reWriteBatchedInserts=true}}
     username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:postgres}}

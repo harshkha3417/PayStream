@@ -23,15 +23,13 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
+        format_sql: false
         jdbc:
           batch_size: 50
           batch_versioned_data: true
           time_zone: UTC
         order_inserts: true
         order_updates: true
-    properties:
-      hibernate:
-        format_sql: false
 
   flyway:
     enabled: true

@@ -236,8 +236,8 @@ payment-gateway/
 | 5 | Webhooks + Refunds | Signed webhooks with retry/DLQ, full and partial refunds | ☑ |
 | 6 | Ledger + history + audit | Double-entry ledger, history API, insert-only audit log | ☑ |
 | 7 | Performance and observability | Redis caching, tuning, Prometheus/Grafana, load tests 1k → 100k with recorded gains | ☑ |
-| 8 | AWS deployment | ECS + RDS + ElastiCache + Kafka, ALB, CI/CD, load test in cloud | ☐ |
-| 9 | Risk / AI | Rule-based then ML risk score, anomaly detection, AI analytics | ☐ |
+| 8 | AWS deployment | ECS + RDS + ElastiCache + Kafka, ALB, CI/CD, load test in cloud | ☑ |
+| 9 | Risk / AI | Rule-based then ML risk score, anomaly detection, AI analytics (Deferred — Project successfully concluded at Week 8 performance benchmark scope) | — |
 
 Easy phases can be merged (5 + 6 are the best candidates). Do not merge 3 or 4; they carry the hardest ideas.
 
@@ -290,6 +290,10 @@ Easy phases can be merged (5 + 6 are the best candidates). Do not merge 3 or 4; 
 | 35 | Redis Write-Through Caching (`payment:{id}:{merchantId}`) and Event-Driven Invalidation (`ledger:balance:{mId}:{cur}`) | Completely offloads high-volume read traffic (payment status polling and 5-query aggregate ledger balances) to sub-millisecond in-memory lookups, preserving 100% of database connection pool capacity for write transactions |
 | 36 | PostgreSQL Multi-Row JDBC Batch Rewriting (`reWriteBatchedInserts=true`) & Sequence Allocation (`allocationSize = 50`) | JPA `IDENTITY` generation disabled Hibernate insert batching; switching `PaymentStatusHistory` to sequence allocation combined with Postgres driver multi-row rewriting consolidates 5 sequential network round-trips into a single TCP flush |
 | 37 | Kafka 4-Partition Topic Scaling & Consumer Concurrency (`concurrency = 4`) with Murmur2 Key-Preserving Causality | Scaling topic partitions from 1 to 4 quadruples asynchronous consumer throughput ceiling (e.g. from 10 msgs/s to 40 msgs/s in processor-service) while Murmur2 hashing on `paymentId` guarantees strict chronological ordering for every individual payment |
+| 38 | Production AWS Graviton ARM64 deployment with 100% Terraform IaC (ECS Fargate + RDS db.t4g + ElastiCache cache.t4g + Kafka t4g.small KRaft) | Maximizes price/performance (~20% cost reduction per compute unit), native ARM64 compilation avoids emulation overhead, and codified IaC guarantees reproducible environments and zero-drift teardown |
+| 39 | Cost guardrails with CloudWatch billing alarms ($25, $50) and single NAT Gateway architecture | Preserves multi-AZ private subnet isolation while cutting egress fixed costs in half ($32/month vs $65/month), ensuring week 8 testing budget remains strictly bounded |
+| 40 | Kafka Consumer Group isolation per listener topic (`payment-service` vs `payment-service-refund`) | Prevents perpetual rebalance storms under Kafka's default `RangeAssignor` when multiple consumers within the same process subscribe to disjoint topic sets |
+| 41 | Carrier thread pinning mitigation for Java 21 Project Loom on low-vCPU cloud instances | Kafka client socket polling executes in synchronized blocks, pinning carrier threads in the ForkJoinPool; disabling virtual threads for Kafka listener services under <= 1 vCPU containers avoids Tomcat acceptor thread starvation |
 
 ## 16. Out of scope
 

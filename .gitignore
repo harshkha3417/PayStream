@@ -34,3 +34,11 @@ build/
 
 # Logs
 *.log
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+tfplan*
+*.tfplan
+
