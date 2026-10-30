@@ -84,7 +84,7 @@ resource "aws_cloudwatch_log_group" "ecs" {
 
 # Helper local for common container definition parameters
 locals {
-  ecr_registry = "${var.ecr_account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
+  ecr_registry = "${var.ecr_account_id}.dkr.ecr.${var.ecr_region}.amazonaws.com"
 }
 
 # ==============================================================================
