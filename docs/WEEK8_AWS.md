@@ -453,14 +453,72 @@ python3 /tmp/bench.py
 
 ---
 
-### 5. Final Zero-Lingering-Cost Teardown Instructions
+## Phase 9: Architecture Upgrade (Horizontal & Vertical Scaling in ap-south-1)
 
-When you are ready to terminate the Mumbai deployment, run:
+### 1. Upgrade Motivation & Specifications
+
+To eliminate single-replica bottlenecks and push throughput past 350+ write RPS and 400+ mixed RPS, the Mumbai infrastructure was upgraded across compute, database, and caching tiers:
+
+| Component | Baseline Configuration | Upgraded Production Configuration | Impact |
+|:---|:---:|:---:|:---|
+| **Spring Cloud Gateway** | 1 replica (512 CPU, 1 GB RAM) | **2 replicas (Multi-AZ across ap-south-1a/b)** | Load balanced across AZs; eliminates ingress contention |
+| **Gateway Rate Limiter** | 1,000 RPS (2,000 burst) | **5,000 RPS (10,000 burst)** | 5x higher threshold; zero rate-limiting drops |
+| **Payment Service** | 1 replica (1024 CPU, 2 GB RAM) | **2 replicas (Multi-AZ)** | Doubles concurrent ACID transaction and HikariCP capacity |
+| **Processor Service** | 1 replica (256 CPU, 512 MB RAM) | **2 replicas (Multi-AZ)** | Concurrent parallel Kafka consumer processing |
+| **Ledger Service** | 1 replica (512 CPU, 1 GB RAM) | **2 replicas (Multi-AZ)** | Parallel double-entry ledger journal processing |
+| **RDS PostgreSQL** | `db.t4g.micro` (1 vCPU, 1 GB RAM) | **`db.t4g.small` (2 vCPUs, 2 GB RAM)** | 2x CPU, 2x Memory, higher buffer cache |
+| **RDS Max Connections** | 100 connections | **200 connections** | Supports multi-replica HikariCP connection pools |
+| **ElastiCache Redis** | `cache.t4g.micro` (0.5 GB RAM) | **`cache.t4g.small` (1.37 GB RAM)** | 2.7x memory capacity, higher network bandwidth |
+| **ALB Target Group** | 300s deregistration delay | **30s deregistration delay** | Fast rolling updates and responsive task draining |
+
+---
+
+### 2. Upgraded In-VPC Transactional Write Benchmarks
+
+Benchmarked directly inside the VPC against the multi-AZ upgraded cluster using high concurrency workers:
+
+| Metric | 1,000 Requests (40 Workers) | 2,000 Requests (50 Workers) |
+|:---|:---:|:---:|
+| **Throughput** | **283.86 req/s** | **355.32 req/s** ⚡ |
+| **Total Test Duration** | **3.52 seconds** | **5.63 seconds** |
+| **Minimum Latency** | **17.32 ms** | **23.86 ms** |
+| **Average Latency** | **137.23 ms** | **139.50 ms** |
+| **Median (`p50`)** | **124.39 ms** | **132.30 ms** |
+| **90th Percentile (`p90`)** | **189.19 ms** | **186.84 ms** |
+| **95th Percentile (`p95`)** | **209.17 ms** | **209.05 ms** |
+| **99th Percentile (`p99`)** | **298.37 ms** | **286.78 ms** |
+| **Maximum Latency** | **311.20 ms** | **324.32 ms** |
+| **Error Rate** | **0.00% (0 errors)** | **0.00% (0 errors)** |
+
+**Key Finding**: Upgrading to dual replicas and `db.t4g.small` increased sustained ACID transactional write throughput from ~150-240 req/s to **355.32 req/s** with sub-210ms p95 latency under high concurrency.
+
+---
+
+### 3. Upgraded Realistic Mixed Traffic Benchmarks (k6 Over Internet)
+
+Tested over broadband from client against the multi-AZ ALB (`http://paygate-alb-668685111.ap-south-1.elb.amazonaws.com`):
+
+* **At 200 RPS Mixed Traffic (30% Writes, 70% Reads)**:
+  - **Success Rate**: **100.00%** (2,001/2,001 checks passed, 0 failures)
+  - **Median Latency (`p50`)**: **74.75 ms**
+  - **95th Percentile (`p95`)**: **175.64 ms**
+* **At 400 RPS Mixed Traffic**:
+  - **Throughput**: **400.00 iters/s** sustained (4,000 requests in 10s)
+  - **Success Rate**: **100.00%** (4,000/4,000 checks passed)
+  - **Median Latency (`p50`)**: **93.68 ms**
+  - **95th Percentile (`p95`)**: **314.64 ms**
+
+---
+
+### 4. Final Zero-Lingering-Cost Teardown Instructions
+
+When you are ready to terminate the deployment, run:
 ```bash
 cd infra/terraform
 terraform destroy -auto-approve
 ```
-This tears down all 67 resources in `ap-south-1`, guaranteeing zero lingering costs.
+This tears down all active resources in `ap-south-1`, guaranteeing zero lingering costs.
+
 
 
 

@@ -169,8 +169,8 @@ resource "aws_ecs_task_definition" "gateway" {
         { name = "REDIS_PORT", value = "6379" },
         { name = "SPRING_DATA_REDIS_HOST", value = aws_elasticache_cluster.redis.cache_nodes[0].address },
         { name = "SPRING_DATA_REDIS_PORT", value = "6379" },
-        { name = "RATE_LIMIT_PER_SECOND", value = "1000" },
-        { name = "RATE_LIMIT_BURST", value = "2000" },
+        { name = "RATE_LIMIT_PER_SECOND", value = "5000" },
+        { name = "RATE_LIMIT_BURST", value = "10000" },
         { name = "JAVA_TOOL_OPTIONS", value = "-Xms256m -Xmx768m" }
       ]
       logConfiguration = {
@@ -191,7 +191,7 @@ resource "aws_ecs_service" "gateway" {
   name                              = "paygate-gateway"
   cluster                           = aws_ecs_cluster.main.id
   task_definition                  = aws_ecs_task_definition.gateway.arn
-  desired_count                     = 1
+  desired_count                     = 2
   launch_type                       = "FARGATE"
   health_check_grace_period_seconds = 60
   deployment_minimum_healthy_percent = 0
@@ -349,7 +349,7 @@ resource "aws_ecs_service" "payment_service" {
   name            = "paygate-payment-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.payment_service.arn
-  desired_count   = 1
+  desired_count   = 2
   launch_type     = "FARGATE"
 
   network_configuration {
@@ -416,7 +416,7 @@ resource "aws_ecs_service" "processor_service" {
   name            = "paygate-processor-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.processor_service.arn
-  desired_count   = 1
+  desired_count   = 2
   launch_type     = "FARGATE"
 
   network_configuration {
@@ -646,7 +646,7 @@ resource "aws_ecs_service" "ledger_service" {
   name            = "paygate-ledger-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.ledger_service.arn
-  desired_count   = 1
+  desired_count   = 2
   launch_type     = "FARGATE"
 
   network_configuration {

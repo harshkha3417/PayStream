@@ -23,7 +23,7 @@ resource "aws_elasticache_cluster" "redis" {
   cluster_id           = "paygate-redis"
   engine               = "redis"
   engine_version       = "7.1"
-  node_type            = "cache.t4g.micro"
+  node_type            = "cache.t4g.small"
   num_cache_nodes      = 1
   parameter_group_name = aws_elasticache_parameter_group.redis.name
   port                 = 6379

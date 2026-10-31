@@ -16,7 +16,7 @@ resource "aws_db_parameter_group" "rds" {
 
   parameter {
     name         = "max_connections"
-    value        = "100"
+    value        = "200"
     apply_method = "pending-reboot"
   }
 
@@ -30,7 +30,7 @@ resource "aws_db_instance" "postgres" {
   identifier        = "paygate-rds-postgres"
   engine            = "postgres"
   engine_version     = "16.9"
-  instance_class    = "db.t4g.micro"
+  instance_class    = "db.t4g.small"
   allocated_storage = 20
   storage_type      = "gp3"
 
