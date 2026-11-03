@@ -197,16 +197,16 @@ docker exec paygate-postgres psql -U postgres -d payments -c \
 
 ---
 
-## 📊 Performance & Load Testing
+## 🧪 Automated Testing & Concurrency Verification
 
-The repository includes [k6](https://k6.io/) load testing scenarios in the `load-tests/` directory:
-- `create-payment-gateway.js`: High-concurrency payment creation through Gateway + Kafka pipeline.
-- `create-payment-idempotent-cold.js`: Concurrent requests testing database idempotency claims.
-- `create-payment-idempotent-replay.js`: Validates high-speed Redis cache replay hits.
+PayStream includes an automated test suite across all services:
+- **Concurrency & Idempotency Testing**: `PaymentConcurrencyTest` utilizes Testcontainers PostgreSQL and `CountDownLatch` barriers to fire concurrent threads racing the exact same idempotency key and optimistic locking (`@Version`) boundaries.
+- **Double-Entry Ledger Invariance**: `LedgerServiceTest` validates the fundamental accounting theorem ($\sum \text{Debits} = \sum \text{Credits}$) across all settlements and refunds.
+- **Cryptographic Security**: `HmacSignatureServiceTest` asserts deterministic HMAC-SHA256 signing and tamper detection.
 
-Execute a load test:
+Run the test suite across all modules:
 ```bash
-k6 run -e RATE=100 -e DURATION=30s load-tests/create-payment-gateway.js
+mvn test
 ```
 
 ---
@@ -218,13 +218,15 @@ PayStream/
 ├── architecture.md           # Master architecture design & Decisions Log (#1-27)
 ├── docker-compose.yml        # Orchestration (Kafka, Postgres, Redis, Services)
 ├── .env.example              # Example environment template
-├── docs/                     # In-depth weekly documentation & engineering guides
-│   └── WEEK4.md              # Week 4: Kafka, Outbox & Processor deep dive
-├── load-tests/               # k6 load testing scripts
-├── auth-service/             # Merchant identity & JWT issuance service
 ├── gateway/                  # Spring Cloud Gateway with Redis rate limiting
-├── payment-service/          # Core payment lifecycle, outbox poller & consumer
-└── processor-service/        # Asynchronous banking simulation service
+├── auth-service/             # Merchant identity & JWT issuance service
+├── payment-service/          # Core payment lifecycle, outbox relay & consumers
+├── processor-service/        # Asynchronous banking simulation service
+├── ledger-service/           # Double-entry accounting & balance engine
+├── refund-service/           # Refund processing & limit validation
+├── webhook-service/          # Merchant event notification & HMAC-SHA256 signing
+├── audit-service/            # Append-only immutable compliance audit trail
+└── infra/                    # Infrastructure as Code (Terraform for AWS deployment)
 ```
 
 ---

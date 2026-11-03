@@ -42,3 +42,10 @@ build/
 tfplan*
 *.tfplan
 
+# Internal Benchmarks, Load Tests & Operational Scripts (Local only)
+benchmarksweek*.md
+scripts/
+load-tests/
+docs/
+
+
